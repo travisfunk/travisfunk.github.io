@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Travis Funkhouser · Open Source Projects</title>
+<meta name="description" content="Open source projects by Travis Funkhouser.">
+<style>
+  :root {
+    --bg: #f7f7f5; --card: #ffffff; --text: #1d1d1f; --muted: #6b6b70;
+    --border: #e3e3e0; --accent: #2563eb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #111113; --card: #1b1b1f; --text: #ececf0; --muted: #9a9aa3;
+            --border: #2c2c32; --accent: #60a5fa; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 960px; margin: 0 auto; padding: 48px 16px 64px; }
+  h1 { margin: 0 0 4px; font-size: 1.9rem; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  .sub a { color: var(--accent); }
+  #search { width: 100%; padding: 10px 12px; font-size: 1rem; border-radius: 8px;
+            border: 1px solid var(--border); background: var(--card); color: var(--text);
+            margin-bottom: 24px; }
+  .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+          padding: 18px; display: flex; flex-direction: column; gap: 8px; }
+  .card h2 { margin: 0; font-size: 1.1rem; word-break: break-word; }
+  .card h2 a { color: var(--text); text-decoration: none; }
+  .card h2 a:hover { color: var(--accent); }
+  .desc { color: var(--muted); margin: 0; flex: 1; }
+  .meta { display: flex; flex-wrap: wrap; gap: 12px; font-size: .85rem; color: var(--muted); }
+  .links { display: flex; gap: 14px; font-size: .9rem; }
+  .links a { color: var(--accent); text-decoration: none; }
+  .topics { display: flex; flex-wrap: wrap; gap: 6px; }
+  .topic { font-size: .75rem; padding: 2px 8px; border-radius: 999px;
+           border: 1px solid var(--border); color: var(--muted); }
+  #status { color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Travis Funkhouser</h1>
+  <p class="sub">Open source projects · <a href="https://github.com/travisfunk">github.com/travisfunk</a></p>
+  <input id="search" type="search" placeholder="Filter projects…" aria-label="Filter projects">
+  <p id="status">Loading projects…</p>
+  <div class="grid" id="grid"></div>
+</main>
+
+<script>
+  // ---- Settings ----
+  const USER = "travisfunk";
+  // Any repo with this topic on GitHub is left off the page.
+  const HIDE_TOPIC = "hide-from-portfolio";
+  // ------------------
+
+  const grid = document.getElementById("grid");
+  const status = document.getElementById("status");
+  const search = document.getElementById("search");
+  let repos = [];
+
+  function esc(s) {
+    return String(s ?? "").replace(/[&<>"']/g, c =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  function render(list) {
+    grid.innerHTML = list.map(r => `
+      <article class="card">
+        <h2><a href="${esc(r.html_url)}">${esc(r.name)}</a></h2>
+        <p class="desc">${esc(r.description || "No description yet.")}</p>
+        ${r.topics?.length ? `<div class="topics">${r.topics.map(t => `<span class="topic">${esc(t)}</span>`).join("")}</div>` : ""}
+        <div class="meta">
+          ${r.language ? `<span>${esc(r.language)}</span>` : ""}
+          <span>★ ${r.stargazers_count}</span>
+          <span>Updated ${new Date(r.pushed_at).toLocaleDateString()}</span>
+        </div>
+        <div class="links">
+          <a href="${esc(r.html_url)}">Code</a>
+          ${r.homepage ? `<a href="${esc(r.homepage)}">Live site</a>` : ""}
+        </div>
+      </article>`).join("");
+    status.textContent = list.length ? "" : "No matching projects.";
+  }
+
+  search.addEventListener("input", () => {
+    const q = search.value.toLowerCase();
+    render(repos.filter(r =>
+      [r.name, r.description, r.language, ...(r.topics || [])]
+        .join(" ").toLowerCase().includes(q)));
+  });
+
+  fetch(`https://api.github.com/users/${USER}/repos?per_page=100&sort=pushed`)
+    .then(res => { if (!res.ok) throw new Error(res.status); return res.json(); })
+    .then(data => {
+      repos = data.filter(r =>
+        !r.fork && !r.archived &&
+        r.name.toLowerCase() !== `${USER}.github.io` &&
+        !(r.topics || []).includes(HIDE_TOPIC));
+      render(repos);
+    })
+    .catch(() => {
+      status.innerHTML = `Couldn't load projects right now. See them on <a href="https://github.com/${USER}">GitHub</a>.`;
+    });
+</script>
+</body>
+</html>
