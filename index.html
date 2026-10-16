@@ -32,7 +32,7 @@
   .card h2 a:hover { color: var(--accent); }
   .desc { color: var(--muted); margin: 0; flex: 1; }
   .meta { display: flex; flex-wrap: wrap; gap: 12px; font-size: .85rem; color: var(--muted); }
-  .links { display: flex; gap: 14px; font-size: .9rem; }
+  .links { display: flex; flex-wrap: wrap; gap: 14px; font-size: .9rem; }
   .links a { color: var(--accent); text-decoration: none; }
   .topics { display: flex; flex-wrap: wrap; gap: 6px; }
   .topic { font-size: .75rem; padding: 2px 8px; border-radius: 999px;
@@ -54,6 +54,16 @@
   const USER = "travisfunk";
   // Any repo with this topic on GitHub is left off the page.
   const HIDE_TOPIC = "hide-from-portfolio";
+  // Curated summaries highlight working features for portfolio visitors.
+  // Apply before search so visitors can discover projects by those features.
+  const PROJECT_DETAILS = {
+    advisoryops: {
+      description: "Healthcare advisory intelligence with private CycloneDX/SPDX SBOM component matching, source-linked review evidence, and local report export.",
+      homepage: "https://travisfunk.github.io/advisoryops/",
+      sbom_url: "https://travisfunk.github.io/advisoryops/#sbom",
+      topics: ["medical-devices", "cybersecurity", "sbom", "cyclonedx", "spdx"]
+    }
+  };
   // ------------------
 
   const grid = document.getElementById("grid");
@@ -80,6 +90,7 @@
         <div class="links">
           <a href="${esc(r.html_url)}">Code</a>
           ${r.homepage ? `<a href="${esc(r.homepage)}">Live site</a>` : ""}
+          ${r.sbom_url ? `<a href="${esc(r.sbom_url)}">Check a device SBOM</a>` : ""}
         </div>
       </article>`).join("");
     status.textContent = list.length ? "" : "No matching projects.";
@@ -98,7 +109,15 @@
       repos = data.filter(r =>
         !r.fork && !r.archived &&
         r.name.toLowerCase() !== `${USER}.github.io` &&
-        !(r.topics || []).includes(HIDE_TOPIC));
+        !(r.topics || []).includes(HIDE_TOPIC))
+        .map(r => {
+          const details = PROJECT_DETAILS[r.name];
+          return details ? {
+            ...r,
+            ...details,
+            topics: [...new Set([...(r.topics || []), ...details.topics])]
+          } : r;
+        });
       render(repos);
     })
     .catch(() => {
